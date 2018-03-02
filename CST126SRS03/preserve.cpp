@@ -2,8 +2,8 @@
 
 #include <cassert>
 #include "gps.h"
+#include "loxodonta.h"
 #include "preserve.h"
-#include "elephant.h"
 
 Preserve::Preserve(): 
 	feature_
@@ -18,16 +18,25 @@ Preserve::Preserve():
 		{ Feature::kRock, Feature::kDirt,  Feature::kDirt,  Feature::kDirt,  Feature::kDirt, Feature::kWater, Feature::kDirt,  Feature::kDirt,  Feature::kBrush, Feature::kRock },
 		{ Feature::kRock, Feature::kDirt,  Feature::kDirt,  Feature::kDirt,  Feature::kDirt, Feature::kDirt,  Feature::kDirt,  Feature::kDirt,  Feature::kWater, Feature::kRock },
 		{ Feature::kRock, Feature::kRock,  Feature::kRock,  Feature::kRock,  Feature::kRock, Feature::kRock,  Feature::kRock,  Feature::kRock,  Feature::kRock,  Feature::kRock }
-	} // TODO: Generate?
+	}, // TODO: Generate?
+	herd_(1, 5)
 {
 }
 
 Preserve::Feature Preserve::getFeature(const int lat, const int lng) const
 {
+	auto herdLat{ herd_.getlat() };
+	auto herdLng{ herd_.getlng() };
+
 	auto result = Feature::kRock;
+
 	if (lat >= 0 && lat < latExtent && lng >= 0 && lng < lngExtent)
 	{
 		result = feature_[lat][lng];
+		if (lat == herdLat && lng == herdLng)
+		{
+			result = Feature::kHerd;
+		}
 	}
 
 	return result;
@@ -42,11 +51,11 @@ Preserve::Feature Preserve::getFeature(const GPS gps) const
 	return result;
 }
 
-Preserve::Feature Preserve::getFeature(const Elephant& elephant) const
+Preserve::Feature Preserve::getFeature(const Loxodonta& loxodonta) const
 {
 	auto result = Feature::kUnknown;
 
-	const auto gpsPtr{ elephant.getGps_() };
+	const auto gpsPtr{ loxodonta.getGps_() };
 
 	if (gpsPtr != nullptr)
 	{
@@ -75,7 +84,7 @@ void Preserve::setFeature(const GPS gps, const Feature feature)
 	setFeature(lat, lng, feature);
 }
 
-int Preserve::getHerdDirection(const Elephant& elephant) const
+int Preserve::getHerdDirection(const Loxodonta& elephant) const
 {
 	auto result = 360;
 
@@ -83,9 +92,10 @@ int Preserve::getHerdDirection(const Elephant& elephant) const
 
 	if (gpsPtr != nullptr)
 	{
-		const auto latDelta = herd_.getlat() - gpsPtr->getlat();
-		const auto lngDelta = herd_.getlng() - gpsPtr->getlng();
-		result = GPS::theta(lngDelta, latDelta);
+		const auto dx = herd_.getlng() - gpsPtr->getlng();
+		const auto dy = -(herd_.getlat() - gpsPtr->getlat());
+		const auto angle = 90- GPS::theta(dx, dy);
+		result = GPS::cardinal(angle); // TODO: Use cardinal compass coordinates?
 	}
 	return result;
 }
